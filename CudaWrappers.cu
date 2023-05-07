@@ -1,7 +1,33 @@
 #include "CudaWrappers.h"
 
-std::vector<cw::DeviceInfo> cw::getDevices() {
-  std::vector<cw::DeviceInfo> result;
+namespace cw {
+
+std::string memsizeToString(size_t bytes) {
+  std::array<const char*, 4> names = { "KB", "MB", "GB", "TB" };
+  const char* prefix = "Bytes";
+
+  size_t integer_part = bytes;
+  size_t fraction = 0;
+
+  for (int i = 1; integer_part >= 1024 && i < names.size(); i++) {
+    fraction = integer_part % 1024;
+    integer_part /= 1024;
+    prefix = names[i];
+  }
+
+  std::stringstream ss;
+  ss << integer_part;
+
+  auto decimal_fraction = (fraction * 10 / 1024);
+  if (fraction > 0)
+    ss << "." << decimal_fraction;
+  ss << " " << prefix;
+
+  return ss.str();
+}
+
+std::vector<DeviceInfo> getDevices() {
+  std::vector<DeviceInfo> result;
 
   int n;
   cudaGetDeviceCount(&n);
@@ -10,11 +36,22 @@ std::vector<cw::DeviceInfo> cw::getDevices() {
     cudaDeviceProp properties;
     cudaGetDeviceProperties(&properties, i);
 
-    cw::DeviceInfo info;
+    DeviceInfo info;
     info.id   = i;
     info.name = properties.name;
+    info.mem_total = properties.totalGlobalMem;
+    info.mem_shared_per_block = properties.sharedMemPerBlock;
+    info.warp_size = properties.warpSize;
+
     result.emplace_back(std::move(info));
   }
 
   return result;
+}
+
+std::ostream& operator<<(std::ostream& os, const DeviceInfo& di) {
+  os << di.to_string();
+  return os;
+}
+
 }
