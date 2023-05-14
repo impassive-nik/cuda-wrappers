@@ -4,6 +4,7 @@
 #include "Grid2D.h"
 
 #include <array>
+#include <functional>
 #include <iostream>
 #include <vector>
 
@@ -12,15 +13,13 @@ namespace cw {
 struct BMPImage : Grid2D<uint8_t[3]> {
   using raw_elem_t = uint8_t[3];
 
-  BMPImage(uint32_t width, uint32_t height) : Grid2D(width, height, 4) {}
-
   struct ConstPixel {
     uint8_t r;
     uint8_t g;
     uint8_t b;
 
-    ConstPixel(const raw_elem_t& elem): r(elem[0]), g(elem[1]), b(elem[2]) {
-    }
+    ConstPixel(const raw_elem_t &elem) : r(elem[0]), g(elem[1]), b(elem[2]) {}
+    ConstPixel(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {}
   };
 
   struct Pixel {
@@ -29,7 +28,30 @@ struct BMPImage : Grid2D<uint8_t[3]> {
     uint8_t &b;
 
     Pixel(raw_elem_t &elem) : r(elem[0]), g(elem[1]), b(elem[2]) {}
+
+    Pixel& operator=(const Pixel& p) { 
+      r = p.r;
+      g = p.g;
+      b = p.b;
+      return *this;
+    }
+
+    Pixel &operator=(const ConstPixel &p) {
+      r = p.r;
+      g = p.g;
+      b = p.b;
+      return *this;
+    }
   };
+
+  BMPImage(uint32_t width, uint32_t height) : Grid2D(width, height, 4) {}
+
+  template <typename elem_t, typename F>
+  BMPImage(const Grid2D<elem_t> &grid, F f) : BMPImage(grid.width, grid.height) {
+    for (uint32_t y = 0; y < height; y++)
+      for (uint32_t x = 0; x < width; x++)
+        at(x, y) = f(grid.at(x, y));
+  }
 
   ConstPixel at(uint32_t x, uint32_t y) const { 
     return ConstPixel(Grid2D::at(x, height - 1 - y));

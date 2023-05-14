@@ -4,8 +4,9 @@
 #include <stdint.h>
 #include <vector>
 
-template<typename elem_t>
-struct Grid2D {
+namespace cw {
+
+template <typename elem_t> struct Grid2D {
   const uint32_t width;
   const uint32_t height;
 
@@ -18,16 +19,17 @@ struct Grid2D {
       : width(width), height(height),
         row_padding((pad - ((sizeof(elem_t) * width) % pad)) % pad),
         row_length(sizeof(elem_t) * width + row_padding),
-        data(row_length * height) {
-  }
+        data(row_length * height) {}
 
   const elem_t &at(uint32_t x, uint32_t y) const {
-    return *((const elem_t *) &data[row_length * y + x * sizeof(elem_t)]);
+    return *((const elem_t *)&data[row_length * y + x * sizeof(elem_t)]);
   }
 
   elem_t &at(uint32_t x, uint32_t y) {
-    return *((elem_t *) &data[row_length * y + x * sizeof(elem_t)]);
+    return *((elem_t *)&data[row_length * y + x * sizeof(elem_t)]);
   }
 };
+
+} // namespace cw
 
 #endif // __GRID2D_H__
