@@ -1,38 +1,42 @@
 #ifndef __BMP_IMAGE_H__
 #define __BMP_IMAGE_H__
 
+#include "Grid2D.h"
+
 #include <array>
 #include <iostream>
 #include <vector>
 
 namespace cw {
 
+struct BMPImage : Grid2D<uint8_t[3]> {
+  using raw_elem_t = uint8_t[3];
 
-struct BMPImage {
-  const uint32_t width;
-  const uint32_t height;
+  BMPImage(uint32_t width, uint32_t height) : Grid2D(width, height, 4) {}
 
-  const uint32_t padding;
-  const uint32_t row_length;
+  struct ConstPixel {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
 
-  std::vector<uint8_t> data;
+    ConstPixel(const raw_elem_t& elem): r(elem[0]), g(elem[1]), b(elem[2]) {
+    }
+  };
 
   struct Pixel {
     uint8_t &r;
     uint8_t &g;
     uint8_t &b;
-    Pixel(uint8_t *p) : r(*p), g(p[1]), b(p[2]) {}
+
+    Pixel(raw_elem_t &elem) : r(elem[0]), g(elem[1]), b(elem[2]) {}
   };
 
-  BMPImage(uint32_t width, uint32_t height)
-      : width(width), height(height), 
-        padding((4 - ((3 * width) % 4)) % 4), 
-        row_length(3 * width + padding),
-        data(row_length * height) {
+  ConstPixel at(uint32_t x, uint32_t y) const { 
+    return ConstPixel(Grid2D::at(x, height - 1 - y));
   }
 
   Pixel at(uint32_t x, uint32_t y) {
-    return Pixel(&data[row_length * (height - 1 - y) + x * 3]);
+    return Pixel(Grid2D::at(x, height - 1 - y));
   }
 
   void saveToFile(const std::string &filename);
