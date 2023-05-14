@@ -1,10 +1,12 @@
 #include "CudaWrappers.h"
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 namespace cw {
 
 std::string memsizeToString(size_t bytes) {
-  std::array<const char*, 4> names = { "KB", "MB", "GB", "TB" };
-  const char* prefix = "Bytes";
+  std::array<const char *, 4> names = {"KB", "MB", "GB", "TB"};
+  const char *prefix = "Bytes";
 
   size_t integer_part = bytes;
   size_t fraction = 0;
@@ -37,7 +39,7 @@ std::vector<DeviceInfo> getDevices() {
     cudaGetDeviceProperties(&properties, i);
 
     DeviceInfo info;
-    info.id   = i;
+    info.id = i;
     info.name = properties.name;
     info.mem_total = properties.totalGlobalMem;
     info.mem_shared_per_block = properties.sharedMemPerBlock;
@@ -49,9 +51,9 @@ std::vector<DeviceInfo> getDevices() {
   return result;
 }
 
-std::ostream& operator<<(std::ostream& os, const DeviceInfo& di) {
-  os << di.to_string();
+std::ostream &operator<<(std::ostream &os, const DeviceInfo &di) {
+  os << di.toString();
   return os;
 }
 
-}
+} // namespace cw

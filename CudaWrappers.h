@@ -19,11 +19,12 @@ struct DeviceInfo {
   size_t mem_shared_per_block = 0;
   size_t warp_size = 0;
 
-  std::string to_string() const {
+  std::string toString() const {
     std::stringstream ss;
     ss << "#" << id << " - " << name << std::endl;
     ss << "  Total global memory: " << memsizeToString(mem_total) << std::endl;
-    ss << "  Shared memory per block: " << memsizeToString(mem_shared_per_block) << std::endl;
+    ss << "  Shared memory per block: " << memsizeToString(mem_shared_per_block)
+       << std::endl;
     ss << "  Warp-size: " << memsizeToString(warp_size) << std::endl;
     return ss.str();
   }
@@ -31,10 +32,8 @@ struct DeviceInfo {
 
 std::vector<DeviceInfo> getDevices();
 
-std::ostream& operator<<(std::ostream& os, const DeviceInfo& di);
+std::ostream &operator<<(std::ostream &os, const DeviceInfo &di);
 
-}
-
-
+} // namespace cw
 
 #endif // __CUDA_WRAPPERS_H__
