@@ -11,7 +11,7 @@ struct Cell {
   Cell(int x, int y): x(x), y(y) {
   }
 
-  static cw::BMPImage::ConstPixel ToPixel(const Cell &cell) {
+  static cw::BMPImage::ConstPixel ToPixel(const Cell &cell, unsigned x, unsigned y) {
     return {(uint8_t)(cell.x % 256),
             (uint8_t)(cell.y % 256),
             (uint8_t)((cell.x + cell.y) % 256)};

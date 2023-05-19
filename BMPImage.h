@@ -18,7 +18,7 @@ struct BMPImage : Grid2D<uint8_t[3]> {
     uint8_t g;
     uint8_t b;
 
-    ConstPixel(const raw_elem_t &elem) : r(elem[0]), g(elem[1]), b(elem[2]) {}
+    ConstPixel(const raw_elem_t &elem) : r(elem[2]), g(elem[1]), b(elem[0]) {}
     ConstPixel(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {}
   };
 
@@ -27,7 +27,7 @@ struct BMPImage : Grid2D<uint8_t[3]> {
     uint8_t &g;
     uint8_t &b;
 
-    Pixel(raw_elem_t &elem) : r(elem[0]), g(elem[1]), b(elem[2]) {}
+    Pixel(raw_elem_t &elem) : r(elem[2]), g(elem[1]), b(elem[0]) {}
 
     Pixel& operator=(const Pixel& p) { 
       r = p.r;
@@ -50,7 +50,7 @@ struct BMPImage : Grid2D<uint8_t[3]> {
   BMPImage(const Grid2D<elem_t> &grid, F f) : BMPImage(grid.width, grid.height) {
     for (uint32_t y = 0; y < height; y++)
       for (uint32_t x = 0; x < width; x++)
-        at(x, y) = f(grid.at(x, y));
+        at(x, y) = f(grid.at(x, y), x, y);
   }
 
   ConstPixel at(uint32_t x, uint32_t y) const { 
@@ -63,6 +63,12 @@ struct BMPImage : Grid2D<uint8_t[3]> {
 
   void saveToFile(const std::string &filename);
 };
+
+template<typename elem_t, typename TO_PIXEL>
+void saveToBMP(const Grid2D<elem_t> &grid, TO_PIXEL ToPixel, const std::string &filename) {
+  BMPImage bmp(grid, ToPixel);
+  bmp.saveToFile(filename);
+}
 
 } // namespace cw
 
