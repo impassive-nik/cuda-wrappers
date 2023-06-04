@@ -5,8 +5,8 @@
 namespace cw {
 
 std::string memsizeToString(size_t bytes) {
-  std::array<const char *, 4> names = {"KB", "MB", "GB", "TB"};
-  const char *prefix = "Bytes";
+  std::array<const char *, 5> names = {"Bytes", "KB", "MB", "GB", "TB"};
+  const char *prefix = names[0];
 
   size_t integer_part = bytes;
   size_t fraction = 0;
