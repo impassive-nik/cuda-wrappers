@@ -67,19 +67,4 @@ void DeviceMemory::copy_from_device(void *to) {
 DeviceMemory::DeviceMemory(size_t size) : size(size) { cudaMalloc(&ptr, size); }
 DeviceMemory::~DeviceMemory() { cudaFree(ptr); }
 
-__global__ void calculateImpl(void *ptr, unsigned row_length, size_t elem_size, void (*fun_ptr)(void *)) {
-  int x = blockIdx.x * blockDim.x + threadIdx.x;
-  int y = blockIdx.y * blockDim.y + threadIdx.y;
-  printf("[%d]", *(int *)ptr);
-  fun_ptr(ptr);
-  printf("(%d)\n", *(int *)ptr);
-}
-
-void DeviceGrid2DImpl::calculate(fun_ptr_t fun_ptr) {
-  calculateImpl<<<host_grid.width, host_grid.height>>>(data.getPtr(), 
-      host_grid.row_length, 
-      host_grid.elem_size, 
-      fun_ptr);
-}
-
 } // namespace cw

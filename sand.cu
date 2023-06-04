@@ -28,7 +28,8 @@ __device__ __host__ void init(Px &px, unsigned x, unsigned y, unsigned w, unsign
   px = (x == 0 || y == 0 || y == h - 1 || x == w - 1) ? Px::WALL : Px::EMPTY;
 }
 
-__device__ __host__ void calculate(Px *px) {
+__device__ __host__ void calculate(void *ptr) {
+  Px* px = (Px*)ptr;
   if (*px == Px::EMPTY)
     *px = Px::SAND;
   else if (*px == Px::SAND)
@@ -36,8 +37,12 @@ __device__ __host__ void calculate(Px *px) {
 }
 
 int main() {
+  const size_t WIDTH = 4096;
+  const size_t HEIGHT = WIDTH;
+  const int ITERS = 100;
+
   std::cout << "Step 0" << std::endl;
-  cw::Grid2D<Px> grid(48, 48);
+  cw::Grid2D<Px> grid(4096, 4096);
   cw::DeviceGrid2D<Px> grid_dev(grid);
 
   for (unsigned y = 0; y < grid.height; y++)
@@ -45,20 +50,23 @@ int main() {
       init(grid.at(x, y), x, y, grid.width, grid.height);
 
   std::cout << "Step 1" << std::endl;
-  for (int i = 0; i < 10; i++) {
+
+  for (int i = 0; i < ITERS; i++)
     for (unsigned y = 0; y < grid.height; y++)
       for (unsigned x = 0; x < grid.width; x++)
         calculate(&grid.at(x, y));
 
-    saveToBMP(grid, ToPixel, "img_" + std::to_string(i) + ".bmp");
-  }
-  std::cout << "Step 2" << std::endl;
-  grid_dev.copyToDevice();
-  for (int i = 0; i < 10; i++) {
-    grid_dev.calculate(calculate);
+  saveToBMP(grid, ToPixel, "sand_cpu.bmp");
 
-    grid_dev.copyToHost();
-    saveToBMP(grid, ToPixel, "dev_img_" + std::to_string(i) + ".bmp");
-  }
+  std::cout << "Step 2" << std::endl;
+
+  grid_dev.copyToDevice();
+
+  for (int i = 0; i < ITERS; i++)
+    grid_dev.calculate<calculate>();
+
+  grid_dev.copyToHost();
+
+  saveToBMP(grid, ToPixel, "sand_gpu.bmp");
   std::cout << "End" << std::endl;
 }

@@ -51,6 +51,15 @@ public:
   ~DeviceMemory();
 };
 
+template<void (*fun_ptr)(void*)>
+__global__ void calculateImpl(void* ptr, unsigned row_length, size_t elem_size) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    auto new_ptr = (char *) ptr;
+    new_ptr += (y * row_length + x) * elem_size;
+    fun_ptr((void *) new_ptr);
+}
+
 class DeviceGrid2DImpl {
 protected:
   DeviceMemory data;
@@ -63,7 +72,13 @@ public:
   void copyToHost() { data.copy_from_device(host_grid.data.data()); }
 
   using fun_ptr_t = void (*)(void *);
-  void calculate(fun_ptr_t fun_ptr);
+  template<fun_ptr_t fun_ptr>
+  void calculate() {
+      calculateImpl<fun_ptr><<<host_grid.width, host_grid.height>>>(data.getPtr(),
+          host_grid.row_length,
+          host_grid.elem_size);
+
+  }
 };
 
 template<typename elem_t>
@@ -71,10 +86,12 @@ class DeviceGrid2D : public DeviceGrid2DImpl {
 public:
   DeviceGrid2D(Grid2D<elem_t> &grid) : DeviceGrid2DImpl(grid) {}
 
-  using fun_ptr_t = void (*)(elem_t *);
-  void calculate(fun_ptr_t fun_ptr) {
-    DeviceGrid2DImpl::calculate((DeviceGrid2DImpl::fun_ptr_t) fun_ptr);
-  }
+  //using fun_ptr_t = void (*)(elem_t *);
+  //
+  //template<fun_ptr_t fun_ptr>
+  //void calculate() {
+  //    DeviceGrid2DImpl::calculate<(DeviceGrid2DImpl::fun_ptr_t) fun_ptr>();
+  //}
 };
 
 } // namespace cw
