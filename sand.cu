@@ -1,6 +1,8 @@
 #include "BMPImage.h"
 #include "CudaWrappers.h"
 #include "Grid2D.h"
+#include "DeviceGrid2D.h"
+#include "Stopwatch.h"
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -13,60 +15,104 @@ enum class Px : char {
   END = WALL
 };
 
-inline cw::BMPImage::ConstPixel ToPixel(Px px, unsigned x, unsigned y) {
+inline cw::BMPImage::ConstPixel toPixel(Px px, unsigned x, unsigned y) {
   switch (px) {
   case Px::EMPTY:
     return {255, 255, 255};
   case Px::SAND:
-    return {255, 255, 0};
+    return {155, 155, 0};
   case Px::WALL:
     return {255, 25, 25};
   }
+  return {0, 0, 0};
 }
 
-__device__ __host__ void init(Px &px, unsigned x, unsigned y, unsigned w, unsigned h) {
-  px = (x == 0 || y == 0 || y == h - 1 || x == w - 1) ? Px::WALL : Px::EMPTY;
+const size_t BORDER = 10;
+const size_t WIDTH = 4096;
+const size_t HEIGHT = WIDTH;
+
+CUDA_HOSTDEV void init(cw::Grid2DInfo::Pos pos) {
+  auto x = GET_POS_X(pos);
+  auto y = GET_POS_Y(pos);
+  auto &result = *((Px *) GET_ELEM(pos));
+
+  if (x < BORDER || y < BORDER || y >= HEIGHT - BORDER || x >= WIDTH - BORDER)
+    result = Px::WALL;
+  else if ((x * 3 + y) % 13 == 4)
+    result = Px::SAND;
+  else
+    result = Px::EMPTY;
 }
 
-__device__ __host__ void calculate(void *ptr) {
-  Px* px = (Px*)ptr;
-  if (*px == Px::EMPTY)
-    *px = Px::SAND;
-  else if (*px == Px::SAND)
-    *px = Px::EMPTY;
+CUDA_HOSTDEV Px move(cw::Grid2DInfo::Pos pos) {
+  auto px = (Px *) GET_ELEM(pos);
+  auto px_above = (Px *) GET_POS_OFFSET(pos, 0, -1);
+  auto px_below = (Px *) GET_POS_OFFSET(pos, 0, 1);
+
+  if (*px == Px::EMPTY && *px_above == Px::SAND)
+    return Px::SAND;
+  if (*px == Px::SAND && *px_below == Px::EMPTY)
+    return Px::EMPTY;
+
+  return *px;
 }
 
 int main() {
-  const size_t WIDTH = 4096;
-  const size_t HEIGHT = WIDTH;
   const int ITERS = 100;
+  const bool RUN_CPU = true;
+  const bool RUN_GPU = true;
 
-  std::cout << "Step 0" << std::endl;
-  cw::Grid2D<Px> grid(4096, 4096);
-  cw::DeviceGrid2D<Px> grid_dev(grid);
+  cw::Stopwatch timer;
 
-  for (unsigned y = 0; y < grid.height; y++)
-    for (unsigned x = 0; x < grid.width; x++)
-      init(grid.at(x, y), x, y, grid.width, grid.height);
+  // ----------------------------------------------------------------
+  std::cout << " --- Init --- " << std::endl;
 
-  std::cout << "Step 1" << std::endl;
+  cw::Grid2D<Px>       grid_cpu(WIDTH, HEIGHT);
+  cw::DeviceGrid2D<Px> grid_gpu(WIDTH, HEIGHT);
 
-  for (int i = 0; i < ITERS; i++)
-    for (unsigned y = 0; y < grid.height; y++)
-      for (unsigned x = 0; x < grid.width; x++)
-        calculate(&grid.at(x, y));
+  if (RUN_CPU)
+    grid_cpu.cellDo<init>();
 
-  saveToBMP(grid, ToPixel, "sand_cpu.bmp");
+  if (RUN_GPU)
+    grid_gpu.cellDo<init>();
 
-  std::cout << "Step 2" << std::endl;
+  std::cout << "Execution time: " + timer.getLastTime() << std::endl;
 
-  grid_dev.copyToDevice();
+  saveToBMP(grid_cpu, toPixel, "sand_0.bmp");
 
-  for (int i = 0; i < ITERS; i++)
-    grid_dev.calculate<calculate>();
+  timer.reset();
 
-  grid_dev.copyToHost();
+  // ----------------------------------------------------------------
+  if (RUN_CPU) {
+    std::cout << " --- Step 1 - CPU --- " << std::endl;
 
-  saveToBMP(grid, ToPixel, "sand_gpu.bmp");
-  std::cout << "End" << std::endl;
+    for (int i = 0; i < ITERS; i++)
+      grid_cpu.cellUpdate<move>(BORDER);
+
+
+    std::cout << "Execution time: " + timer.getLastTime() << std::endl;
+              
+    saveToBMP(grid_cpu, toPixel, "sand_cpu.bmp");
+  
+    timer.reset();
+  }
+  
+  // ----------------------------------------------------------------
+  if (RUN_GPU) {
+    std::cout << " --- Step 2 - GPU --- " << std::endl;
+
+    for (int i = 0; i < ITERS; i++)
+      grid_gpu.cellUpdate<move>(BORDER);
+
+    grid_gpu.copyTo(grid_cpu);
+
+    std::cout << "Execution time: " + timer.getLastTime() << std::endl;
+
+    saveToBMP(grid_cpu, toPixel, "sand_gpu.bmp");
+  
+    timer.reset();
+  }
+  std::cout << " --- End --- " << std::endl;
+
+  std::cout << "Total Execution time: " + timer.getTotalTime() << std::endl;
 }

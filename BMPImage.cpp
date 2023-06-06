@@ -21,11 +21,13 @@ std::ostream &fillN(std::ostream &os, size_t n, uint8_t value) {
   return os;
 }
 
+namespace cw {
+
 std::ostream &operator<<(std::ostream &os, const cw::BMPImage &img) {
   uint32_t file_header_size = 14;
   uint32_t info_header_size = 40;
   uint32_t total_header_size = 40;
-  uint32_t file_size = total_header_size + (uint32_t) img.data.size();
+  uint32_t file_size = total_header_size + (uint32_t)img.data.size();
 
   // File header
   os << "BM";
@@ -36,16 +38,18 @@ std::ostream &operator<<(std::ostream &os, const cw::BMPImage &img) {
 
   // Info header
   writeLE32(os, info_header_size);
-  writeLE32(os, img.width);
-  writeLE32(os, img.height);
+  writeLE32(os, img.info.width);
+  writeLE32(os, img.info.height);
   writeLE16(os, 1);  // Number of planes
   writeLE16(os, 24); // Bits per pixel
   fillN(os, info_header_size - 16 /* already written bytes count */, '\0');
 
   // Data
-  os.write((const char *) &img.data[0], img.data.size());
+  os.write((const char *)&img.data[0], img.data.size());
   return os;
 }
+
+} // namespace cw
 
 void cw::BMPImage::saveToFile(const std::string& filename) {
   std::ofstream outfile(filename, std::ios::out | std::ios::binary);

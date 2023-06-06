@@ -10,8 +10,8 @@
 
 namespace cw {
 
-struct BMPImage : Grid2D<uint8_t[3]> {
-  using raw_elem_t = uint8_t[3];
+struct BMPImage : Grid2D<std::array<uint8_t, 3>> {
+  using raw_elem_t = std::array<uint8_t, 3>;
 
   struct ConstPixel {
     uint8_t r;
@@ -47,31 +47,32 @@ struct BMPImage : Grid2D<uint8_t[3]> {
   BMPImage(uint32_t width, uint32_t height) : Grid2D(width, height, 4) {}
 
   template <typename elem_t, typename F>
-  BMPImage(const Grid2D<elem_t> &grid, F f) : BMPImage(grid.width, grid.height) {
-    for (uint32_t y = 0; y < height; y++)
-      for (uint32_t x = 0; x < width; x++)
-        at(x, y) = f(grid.at(x, y), x, y);
+  BMPImage(const Grid2D<elem_t> &grid, F f) : BMPImage(grid.info.width, grid.info.height) {
+    for (uint32_t y = 0; y < info.height; y++)
+      for (uint32_t x = 0; x < info.width; x++)
+        at(x, y) = f(*grid.at(x, y), x, y);
   }
 
   ConstPixel at(uint32_t x, uint32_t y) const { 
-    return ConstPixel(Grid2D::at(x, height - 1 - y));
+    return ConstPixel(*Grid2D::at(x, info.height - 1 - y));
   }
 
   Pixel at(uint32_t x, uint32_t y) {
-    return Pixel(Grid2D::at(x, height - 1 - y));
+    return Pixel(*Grid2D::at(x, info.height - 1 - y));
   }
 
   void saveToFile(const std::string &filename);
 };
 
+std::ostream &operator<<(std::ostream &os, const cw::BMPImage &img);
+
 template<typename elem_t, typename TO_PIXEL>
-void saveToBMP(const Grid2D<elem_t> &grid, TO_PIXEL ToPixel, const std::string &filename) {
-  BMPImage bmp(grid, ToPixel);
+void saveToBMP(const Grid2D<elem_t> &grid, TO_PIXEL toPixel, const std::string &filename) {
+  BMPImage bmp(grid, toPixel);
   bmp.saveToFile(filename);
 }
 
 } // namespace cw
 
-std::ostream &operator<<(std::ostream &os, const cw::BMPImage &img);
 
 #endif __BMP_IMAGE_H__

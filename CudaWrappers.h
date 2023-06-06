@@ -5,15 +5,24 @@
 
 #include <array>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#ifdef __CUDACC__
+#define CUDA_HOSTDEV __host__ __device__
+#else
+#define CUDA_HOSTDEV
+#endif
 
 namespace cw {
 
 // returns memory size in normalized format, e.g. "512 Bytes", "2.5 Gb" etc.
 std::string memsizeToString(size_t bytes);
 
+// stores information about a GPU device
 struct DeviceInfo {
   int id = -1;
   std::string name;
@@ -21,77 +30,32 @@ struct DeviceInfo {
   size_t mem_shared_per_block = 0;
   size_t warp_size = 0;
 
-  std::string toString() const {
-    std::stringstream ss;
-    ss << "#" << id << " - " << name << std::endl;
-    ss << "  Total global memory: " << memsizeToString(mem_total) << std::endl;
-    ss << "  Shared memory per block: " << memsizeToString(mem_shared_per_block)
-       << std::endl;
-    ss << "  Warp-size: " << memsizeToString(warp_size) << std::endl;
-    return ss.str();
-  }
+  std::string toString() const;
 };
-
-std::vector<DeviceInfo> getDevices();
 
 std::ostream &operator<<(std::ostream &os, const DeviceInfo &di);
 
+// returns vector of GPU devices' information
+std::vector<DeviceInfo> getDevices();
+
+// wrapper for an allocated GPU memory
 class DeviceMemory {
   size_t size;
   void *ptr;
+
 public:
   DeviceMemory(size_t size);
+  DeviceMemory(const DeviceMemory &) = delete;
+  DeviceMemory &operator=(const DeviceMemory &) = delete;
 
-  void copy_to_device(void *from);
-  void copy_from_device(void *to);
+  void copy_from(const void *from);
+  void copy_from(const DeviceMemory &from);
+  void copy_to(void *to) const;
 
   size_t getSize() const { return size; }
   void *getPtr() const { return ptr; }
 
   ~DeviceMemory();
-};
-
-template<void (*fun_ptr)(void*)>
-__global__ void calculateImpl(void* ptr, unsigned row_length, size_t elem_size) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    auto new_ptr = (char *) ptr;
-    new_ptr += (y * row_length + x) * elem_size;
-    fun_ptr((void *) new_ptr);
-}
-
-class DeviceGrid2DImpl {
-protected:
-  DeviceMemory data;
-  Grid2DImpl &host_grid;
-
-public:
-  DeviceGrid2DImpl(Grid2DImpl &grid) : host_grid(grid), data(grid.data.size()) {}
-
-  void copyToDevice() { data.copy_to_device(host_grid.data.data()); }
-  void copyToHost() { data.copy_from_device(host_grid.data.data()); }
-
-  using fun_ptr_t = void (*)(void *);
-  template<fun_ptr_t fun_ptr>
-  void calculate() {
-      calculateImpl<fun_ptr><<<host_grid.width, host_grid.height>>>(data.getPtr(),
-          host_grid.row_length,
-          host_grid.elem_size);
-
-  }
-};
-
-template<typename elem_t>
-class DeviceGrid2D : public DeviceGrid2DImpl {
-public:
-  DeviceGrid2D(Grid2D<elem_t> &grid) : DeviceGrid2DImpl(grid) {}
-
-  //using fun_ptr_t = void (*)(elem_t *);
-  //
-  //template<fun_ptr_t fun_ptr>
-  //void calculate() {
-  //    DeviceGrid2DImpl::calculate<(DeviceGrid2DImpl::fun_ptr_t) fun_ptr>();
-  //}
 };
 
 } // namespace cw

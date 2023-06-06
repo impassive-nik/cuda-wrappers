@@ -4,6 +4,27 @@
 
 namespace cw {
 
+bool checkLast(const char* const file, const int line) {
+  cudaError_t err{cudaGetLastError()};
+  if (err != cudaSuccess) {
+    std::cerr << "CUDA Runtime Error at: " << file << ":" << line
+              << std::endl;
+    std::cerr << cudaGetErrorString(err) << std::endl;
+    return true;
+  }
+  return false;
+}
+
+std::string DeviceInfo::toString() const {
+  std::stringstream ss;
+  ss << "#" << id << " - " << name << std::endl;
+  ss << "  Total global memory: " << memsizeToString(mem_total) << std::endl;
+  ss << "  Shared memory per block: " << memsizeToString(mem_shared_per_block)
+      << std::endl;
+  ss << "  Warp-size: " << memsizeToString(warp_size) << std::endl;
+  return ss.str();
+}
+
 std::string memsizeToString(size_t bytes) {
   std::array<const char *, 5> names = {"Bytes", "KB", "MB", "GB", "TB"};
   const char *prefix = names[0];
@@ -56,11 +77,15 @@ std::ostream &operator<<(std::ostream &os, const DeviceInfo &di) {
   return os;
 }
 
-void DeviceMemory::copy_to_device(void* from) {
+void DeviceMemory::copy_from(const DeviceMemory &from) {
+  cudaMemcpy(ptr, from.ptr, size, cudaMemcpyDeviceToDevice);
+}
+
+void DeviceMemory::copy_from(const void* from) {
   cudaMemcpy(ptr, from, size, cudaMemcpyHostToDevice);
 }
 
-void DeviceMemory::copy_from_device(void *to) {
+void DeviceMemory::copy_to(void *to) const {
   cudaMemcpy(to, ptr, size, cudaMemcpyDeviceToHost);
 }
 
