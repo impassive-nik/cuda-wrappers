@@ -75,4 +75,4 @@ void saveToBMP(const Grid2D<elem_t> &grid, TO_PIXEL toPixel, const std::string &
 } // namespace cw
 
 
-#endif __BMP_IMAGE_H__
+#endif // __BMP_IMAGE_H__

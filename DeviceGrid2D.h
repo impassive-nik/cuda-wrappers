@@ -78,8 +78,8 @@ public:
   DeviceGrid2D(const Grid2DImpl &grid) : DeviceGrid2D(grid.info) {}
   DeviceGrid2D(const DeviceGrid2DImpl &grid) : DeviceGrid2D(grid.info_host) {}
 
-  using do_fun_t = Grid2D<elem_t>::do_fun_t;
-  using update_fun_t = Grid2D<elem_t>::update_fun_t;
+  using do_fun_t = typename Grid2D<elem_t>::do_fun_t;
+  using update_fun_t = typename Grid2D<elem_t>::update_fun_t;
   
   template<do_fun_t fun_ptr>
   void cellDo(uint32_t border = 0) {

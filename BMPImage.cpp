@@ -1,6 +1,7 @@
 #include "BMPImage.h"
 #include <algorithm>
 #include <fstream>
+#include <iterator>
 
 std::ostream &writeLE16(std::ostream &os, uint16_t value) {
   os.put((uint8_t) value);

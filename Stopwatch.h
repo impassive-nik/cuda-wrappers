@@ -7,7 +7,8 @@
 namespace cw {
 
 class Stopwatch {
-  std::chrono::time_point<std::chrono::high_resolution_clock> created;
+  std::chrono::time_point<std::chrono::high_resolution_clock> created =
+      std::chrono::high_resolution_clock::now();
   std::chrono::time_point<std::chrono::high_resolution_clock> last;
 public:
   Stopwatch() {
