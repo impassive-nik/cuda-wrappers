@@ -1,7 +1,12 @@
 #ifndef __CUDA_WRAPPERS_H__
 #define __CUDA_WRAPPERS_H__
 
-#include "Grid2D.h"
+#ifdef __CUDACC__
+#define CUDA_HOSTDEV __host__ __device__
+#define CUDA_DEFINED 
+#else
+#define CUDA_HOSTDEV 
+#endif
 
 #include <array>
 #include <iostream>
@@ -10,12 +15,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#ifdef __CUDACC__
-#define CUDA_HOSTDEV __host__ __device__
-#else
-#define CUDA_HOSTDEV
-#endif
 
 namespace cw {
 

@@ -28,25 +28,29 @@ const size_t BORDER = 1;
 const size_t WIDTH = 128;
 const size_t HEIGHT = WIDTH;
 
-void init(cw::Grid2DInfo::Pos pos) {
-  auto &result = *((Cell *) GET_ELEM(pos));
+void init(cw::Pos pos) {
+  using namespace cw;
+
+  auto &result = *get<Cell>(pos);
   result = (rand() % 3 == 1) ? Cell::CELL : Cell::EMPTY;
 }
 
-CUDA_HOSTDEV Cell move(cw::Grid2DInfo::Pos pos) {
-  auto c = *((char *) GET_ELEM(pos));
+CUDA_HOSTDEV Cell move(cw::Pos pos) {
+  using namespace cw;
+
+  auto c = *get<char>(pos);
 
   int neighbours = 0;
-  neighbours += *((char *) GET_POS_OFFSET(pos, -1, -1));
-  neighbours += *((char *) GET_POS_OFFSET(pos,  0, -1));
-  neighbours += *((char *) GET_POS_OFFSET(pos,  1, -1));
+  neighbours += *offset<char>(pos, -1, -1);
+  neighbours += *offset<char>(pos,  0, -1);
+  neighbours += *offset<char>(pos,  1, -1);
 
-  neighbours += *((char *) GET_POS_OFFSET(pos,  -1, 0));
-  neighbours += *((char *) GET_POS_OFFSET(pos,   1, 0));
+  neighbours += *offset<char>(pos,  -1, 0);
+  neighbours += *offset<char>(pos,   1, 0);
 
-  neighbours += *((char *) GET_POS_OFFSET(pos, -1,  1));
-  neighbours += *((char *) GET_POS_OFFSET(pos,  0,  1));
-  neighbours += *((char *) GET_POS_OFFSET(pos,  1,  1));
+  neighbours += *offset<char>(pos, -1,  1);
+  neighbours += *offset<char>(pos,  0,  1);
+  neighbours += *offset<char>(pos,  1,  1);
 
   if (c) {
     return (Cell)(neighbours > 1 && neighbours < 4);

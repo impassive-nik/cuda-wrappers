@@ -31,10 +31,12 @@ const size_t BORDER = 10;
 const size_t WIDTH = 4096;
 const size_t HEIGHT = WIDTH;
 
-CUDA_HOSTDEV void init(cw::Grid2DInfo::Pos pos) {
-  auto x = GET_POS_X(pos);
-  auto y = GET_POS_Y(pos);
-  auto &result = *((Px *) GET_ELEM(pos));
+CUDA_HOSTDEV void init(cw::Pos pos) {
+  using namespace cw;
+
+  auto x = getX(pos);
+  auto y = getY(pos);
+  auto &result = *get<Px>(pos);
 
   if (x < BORDER || y < BORDER || y >= HEIGHT - BORDER || x >= WIDTH - BORDER)
     result = Px::WALL;
@@ -44,10 +46,12 @@ CUDA_HOSTDEV void init(cw::Grid2DInfo::Pos pos) {
     result = Px::EMPTY;
 }
 
-CUDA_HOSTDEV Px move(cw::Grid2DInfo::Pos pos) {
-  auto px = (Px *) GET_ELEM(pos);
-  auto px_above = (Px *) GET_POS_OFFSET(pos, 0, -1);
-  auto px_below = (Px *) GET_POS_OFFSET(pos, 0, 1);
+CUDA_HOSTDEV Px move(cw::Pos pos) {
+  using namespace cw;
+  
+  auto px = get<Px>(pos);
+  auto px_above = offset<Px>(pos, 0, -1);
+  auto px_below = offset<Px>(pos, 0,  1);
 
   if (*px == Px::EMPTY && *px_above == Px::SAND)
     return Px::SAND;

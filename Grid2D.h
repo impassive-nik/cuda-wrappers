@@ -8,6 +8,34 @@
 
 namespace cw {
 
+struct Pos {
+  const uint8_t *base_ptr;
+  const size_t elem_size;
+  const size_t row_length;
+  void *ptr;
+
+  Pos(uint8_t *base_ptr, uint32_t x, uint32_t y, size_t elem_size, size_t row_length):
+    base_ptr(base_ptr), ptr(base_ptr + x * elem_size + y * row_length), elem_size(elem_size), row_length(row_length) {}
+};
+  
+inline CUDA_HOSTDEV uint32_t getX(const Pos &p) {
+  return ((((uint8_t *)p.ptr - p.base_ptr) % p.row_length) / p.elem_size);
+}
+
+inline CUDA_HOSTDEV uint32_t getY(const Pos &p) {
+  return ((((uint8_t *)p.ptr - p.base_ptr) / p.row_length) / p.elem_size);
+}
+
+template <typename elem_t>
+inline CUDA_HOSTDEV elem_t *get(const Pos &p) {
+  return (elem_t *) p.ptr;
+}
+
+template <typename elem_t>
+CUDA_HOSTDEV elem_t *offset(const Pos &p, int32_t dx, int32_t dy) {
+  return (elem_t *) (void *)((((uint8_t *) p.ptr) + dx * (int64_t) p.elem_size + dy * (int64_t) p.row_length));
+}
+
 struct Grid2DInfo {
   uint32_t elem_size;
   uint32_t width;
@@ -20,38 +48,6 @@ struct Grid2DInfo {
       auto row_padding = (pad - ((elem_size * width) % pad)) % pad;
       row_length = elem_size * width + row_padding;
   }
-
-  struct Pos {
-    const uint8_t *base_ptr;
-    const size_t elem_size;
-    const size_t row_length;
-    void *ptr;
-
-    Pos(uint8_t *base_ptr, uint32_t x, uint32_t y, size_t elem_size, size_t row_length):
-      base_ptr(base_ptr), ptr(base_ptr + x * elem_size + y * row_length), elem_size(elem_size), row_length(row_length) {}
-
-    #define GET_POS_X(pos) ((((uint8_t *)(pos).ptr - (pos).base_ptr) % (pos).row_length) / (pos).elem_size)
-    uint32_t getX() const {
-      return GET_POS_X(*this);
-    }
-
-    #define GET_POS_Y(pos) ((((uint8_t *)(pos).ptr - (pos).base_ptr) / (pos).row_length) / (pos).elem_size)
-    uint32_t getY() const {
-      return GET_POS_Y(*this);
-    }
-
-    #define GET_POS_OFFSET(pos, dx, dy) ((void *)((((uint8_t *) (pos).ptr) + (dx) * (int64_t) (pos).elem_size + (dy) * (int64_t) (pos).row_length)))
-    template <typename elem_t>
-    elem_t *offset(int32_t dx, int32_t dy) {
-      return (elem_t *) GET_POS_OFFSET(*this, dx, dy);
-    }
-
-    #define GET_ELEM(pos) ((pos).ptr)
-    template <typename elem_t>
-    elem_t *get() const {
-      return (elem_t *) GET_ELEM(*this);
-    }
-  };
 
   Pos at(void *base_ptr, uint32_t x, uint32_t y) const {
     return Pos((uint8_t *) base_ptr, x, y, elem_size, row_length);
@@ -81,16 +77,6 @@ struct Grid2DImpl {
     return &data[(size_t) info.row_length * y + x * info.elem_size];
   }
 
-  using do_fun_t = void (Grid2DInfo::Pos);
-  
-  template<do_fun_t fun_ptr>
-  void cellDo(uint32_t border = 0) {
-    //TODO: openMP?
-    for (unsigned y = border; y < info.height - border; y++)
-      for (unsigned x = border; x < info.width - border; x++)
-        fun_ptr(info.at(data.data(), x, y));
-  }
-
   virtual ~Grid2DImpl() {
   }
 };
@@ -111,8 +97,8 @@ struct Grid2D : public Grid2DImpl {
     return (elem_t *) Grid2DImpl::at(x, y);
   }
 
-  using do_fun_t = Grid2DImpl::do_fun_t;
-  using update_fun_t = elem_t (Grid2DInfo::Pos);
+  using do_fun_t = void(Pos);
+  using update_fun_t = elem_t(Pos);
   
   template<do_fun_t fun_ptr>
   void cellDo(uint32_t border = 0) {
@@ -129,7 +115,7 @@ struct Grid2D : public Grid2DImpl {
     //TODO: openMP?
     for (unsigned y = border; y < info.height - border; y++)
       for (unsigned x = border; x < info.width - border; x++)
-        *info.at(data_copy.data(), x, y).get<elem_t>() = fun_ptr(info.at(data.data(), x, y));
+        *get<elem_t>(info.at(data_copy.data(), x, y)) = fun_ptr(info.at(data.data(), x, y));
     
     data = std::move(data_copy);
   }
