@@ -27,7 +27,7 @@ namespace cw {
 std::ostream &operator<<(std::ostream &os, const cw::BMPImage &img) {
   uint32_t file_header_size = 14;
   uint32_t info_header_size = 40;
-  uint32_t total_header_size = 40;
+  uint32_t total_header_size = file_header_size + info_header_size;
   uint32_t file_size = total_header_size + (uint32_t)img.data.size();
 
   // File header
